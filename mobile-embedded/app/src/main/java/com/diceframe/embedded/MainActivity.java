@@ -87,19 +87,18 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** 轮询 poc_boot.STATE;返回 null 表示就绪,否则返回给用户看的错误文本。 */
+    /** 轮询 poc_boot 启动状态;返回 null 表示就绪,否则返回给用户看的错误文本。 */
     private String waitForPythonState() throws InterruptedException {
         long start = System.currentTimeMillis();
         long deadline = start + BOOT_TIMEOUT_SECONDS * 1000L;
+        PyObject pocBoot = Python.getInstance().getModule("poc_boot");
         while (System.currentTimeMillis() < deadline) {
-            PyObject state = Python.getInstance().getModule("poc_boot").callAttr("get_state");
-            String phase = state.get("status").toString();
+            String phase = pocBoot.callAttr("get_state").toString();
             if ("ready".equals(phase)) {
                 return null;
             }
             if ("failed".equals(phase)) {
-                PyObject error = state.get("error");
-                return error == null ? "未知错误" : error.toString();
+                return pocBoot.callAttr("get_error").toString();
             }
             final long elapsed = (System.currentTimeMillis() - start) / 1000;
             runOnUiThread(() -> status.setText(

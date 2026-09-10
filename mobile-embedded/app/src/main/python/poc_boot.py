@@ -19,8 +19,14 @@ PORT = 18000
 STATE = {"status": "starting", "error": ""}
 
 
-def get_state() -> dict:
-    return dict(STATE)
+def get_state() -> str:
+    """宿主轮询接口:返回当前阶段字符串(starting/importing-backend/starting-server/ready/failed)。"""
+    return STATE["status"]
+
+
+def get_error() -> str:
+    """failed 阶段返回完整 traceback,其余返回空串。"""
+    return STATE.get("error", "")
 
 
 def start(app_root: str) -> None:
