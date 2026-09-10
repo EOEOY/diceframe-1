@@ -45,6 +45,8 @@ gradle -p mobile-embedded assembleDebug
   覆盖式,换取"零陈旧资源"的简单性),随后在后台线程启动嵌入服务。
 - `data/` 落在 app 私有目录,等价桌面便携版布局;运行日志在
   `app_root/data/logs`。
+- 首次启动生成的访问密码会直接显示在启动界面(设备上无控制台可看
+  `data/access_token.txt`),WebUI 打开时按提示输入即可。
 
 ## 已知限制(POC 边界,均有意为之)
 

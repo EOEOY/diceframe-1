@@ -59,7 +59,9 @@ public class MainActivity extends Activity {
             Python.getInstance().getModule("poc_boot").callAttr("start", appRoot.getAbsolutePath());
             waitUntilReady(120);
             runOnUiThread(() -> {
-                status.setText("本机后端已就绪:" + SERVER_URL);
+                String token = readAccessToken(appRoot);
+                status.setText("本机后端已就绪:" + SERVER_URL
+                        + (token.isEmpty() ? "" : "\n访问密码:" + token));
                 webView.loadUrl(SERVER_URL);
             });
         } catch (Throwable e) {
@@ -101,6 +103,17 @@ public class MainActivity extends Activity {
             while ((read = in.read(buffer)) > 0) {
                 out.write(buffer, 0, read);
             }
+        }
+    }
+
+    /** 首次启动生成的访问密码存在 data/access_token.txt;设备上没有控制台,直接显示给用户。 */
+    private String readAccessToken(File appRoot) {
+        File tokenFile = new File(appRoot, "data/access_token.txt");
+        try (InputStream in = new java.io.FileInputStream(tokenFile)) {
+            java.util.Scanner scanner = new java.util.Scanner(in, "UTF-8").useDelimiter("\\A");
+            return scanner.hasNext() ? scanner.next().trim() : "";
+        } catch (IOException e) {
+            return "";
         }
     }
 
