@@ -51,12 +51,15 @@ public class MainActivity extends Activity {
 
     private void boot() {
         try {
+            statusOnUi("正在解压后端资源(约 30MB,每次启动都会执行)…");
             File appRoot = new File(getFilesDir(), "app_root");
             copyAssetDir(ASSET_ROOT, appRoot);
+            statusOnUi("正在启动 Python 运行时…");
             if (!Python.isStarted()) {
                 Python.start(new AndroidPlatform(getApplicationContext()));
             }
             Python.getInstance().getModule("poc_boot").callAttr("start", appRoot.getAbsolutePath());
+            statusOnUi("正在等待后端服务就绪…");
             waitUntilReady(120);
             runOnUiThread(() -> {
                 String token = readAccessToken(appRoot);
@@ -68,6 +71,10 @@ public class MainActivity extends Activity {
             String message = "启动失败:" + e;
             runOnUiThread(() -> status.setText(message));
         }
+    }
+
+    private void statusOnUi(String text) {
+        runOnUiThread(() -> status.setText(text));
     }
 
     /** 递归解压 APK assets 中的后端目录;每次启动覆盖,避免版本标记逻辑引入陈旧资源。 */
