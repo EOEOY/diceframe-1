@@ -15,6 +15,7 @@ tasks.register('copyBackend', Copy) {
     }
     from(new File(backendRoot, 'prompts')) { into 'prompts' }
     from(new File(backendRoot, 'templates')) { into 'templates' }
+    from(new File(backendRoot, 'legal')) { into 'legal' }
     from(new File(backendRoot, 'static-v2')) { into 'static-v2' }
     into layout.buildDirectory.dir('diceframe_backend')
 }

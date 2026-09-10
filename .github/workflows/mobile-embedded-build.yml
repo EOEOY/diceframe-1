@@ -33,6 +33,12 @@ jobs:
           cache: npm
           cache-dependency-path: frontend-v2/package-lock.json
 
+      # Chaquopy 要求 buildPython 与目标 Python 小版本一致(3.11);runner 默认 python3 是 3.12
+      - name: Set up Python 3.11 (Chaquopy buildPython)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
       # 默认模式(vue-tsc -b && vite build)输出到 ../static-v2,
       # 供下方 Gradle copyBackend 任务打包进 APK assets。
       - name: Build frontend into static-v2
