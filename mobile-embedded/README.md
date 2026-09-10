@@ -51,6 +51,8 @@ gradle -p mobile-embedded assembleDebug
 - 不含前台服务:退到后台后系统可能回收进程;POC 阶段在前台使用。
 - 未打包内置 `plugins/`:插件宿主依赖子进程,iOS 与部分 Android 场景不可用,
   按 fail-closed 原则整组不装载;后续以 capability 开关提供 in-process 模式。
-- `cryptography` 等 native wheel 依赖 Chaquopy 预编译仓库的版本覆盖,
-  构建失败时优先检查这一点(`--only-binary=:all:` 会直接给出明确报错)。
+- `cryptography` 在 Chaquopy 预编译仓库的 Android/py311 目标上最高 42.0.8,
+  POC 依赖下限已放宽(`>=42`,仅限 APK 内;后端只用到其中的稳定 API,且
+  本机回环 HTTP 不涉及证书签发)。构建失败时优先检查各包的 wheel 覆盖
+  (`--only-binary=:all:` 会直接给出明确报错)。
 - iOS 未包含;`web.run_app` 的桌面重启路径(`os.execv`)在嵌入模式下不生效。
