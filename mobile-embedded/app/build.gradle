@@ -1,0 +1,58 @@
+plugins {
+    id 'com.android.application'
+    id 'com.chaquo.python'
+}
+
+// mobile-embedded 的上一级即主仓库根;后端源码与运行资源在构建期同步进 APK assets,
+// 运行期解压到 app 私有目录,保持与桌面便携版一致的目录布局。
+def backendRoot = rootDir.parentFile
+
+tasks.register('copyBackend', Copy) {
+    from(new File(backendRoot, 'web_server.py'))
+    from(new File(backendRoot, 'src')) {
+        into 'src'
+        exclude '**/__pycache__/**', '**/*.pyc'
+    }
+    from(new File(backendRoot, 'prompts')) { into 'prompts' }
+    from(new File(backendRoot, 'templates')) { into 'templates' }
+    from(new File(backendRoot, 'static-v2')) { into 'static-v2' }
+    into layout.buildDirectory.dir('diceframe_backend')
+}
+
+android {
+    namespace 'com.diceframe.embedded'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.diceframe.embedded'
+        minSdk 24
+        targetSdk 34
+        versionCode 1
+        versionName '0.1.0-poc'
+
+        python {
+            version '3.11'
+        }
+    }
+
+    sourceSets {
+        main {
+            assets.srcDir layout.buildDirectory.dir('diceframe_backend')
+        }
+    }
+}
+
+chaquopy {
+    defaultConfig {
+        buildPython isWindows() ? 'python' : 'python3'
+        pip {
+            install '-r', 'requirements.txt'
+        }
+    }
+}
+
+tasks.named('preBuild') { dependsOn 'copyBackend' }
+
+static boolean isWindows() {
+    System.getProperty('os.name').toLowerCase().contains('windows')
+}

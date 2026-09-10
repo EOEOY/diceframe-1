@@ -1,0 +1,56 @@
+name: mobile-embedded-build
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - poc/embedded-backend
+    paths:
+      - 'mobile-embedded/**'
+      - 'src/**'
+      - 'web_server.py'
+      - 'templates/**'
+      - 'prompts/**'
+      - 'frontend-v2/**'
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend-v2/package-lock.json
+
+      # 默认模式(vue-tsc -b && vite build)输出到 ../static-v2,
+      # 供下方 Gradle copyBackend 任务打包进 APK assets。
+      - name: Build frontend into static-v2
+        run: |
+          npm ci
+          npm run build
+        working-directory: frontend-v2
+
+      - name: Set up Gradle 8.7
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Build debug APK
+        run: gradle -p mobile-embedded assembleDebug --stacktrace
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: diceframe-embedded-debug-apk
+          path: mobile-embedded/app/build/outputs/apk/debug/app-debug.apk

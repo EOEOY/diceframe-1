@@ -1,0 +1,8 @@
+# 嵌入运行依赖:与主仓库 requirements.txt 对应,但不带 hash 固定——
+# Chaquopy 的 Android wheel 与桌面 wheel 是不同二进制,hash 校验必然失败。
+--only-binary=:all:
+aiohttp>=3.9
+cryptography>=43
+edge-tts>=7
+Pillow>=10
+tabulate>=0.10
