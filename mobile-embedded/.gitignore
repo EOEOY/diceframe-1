@@ -1,4 +1,5 @@
 .gradle/
 build/
+app/src/main/assets/
 local.properties
 .idea/

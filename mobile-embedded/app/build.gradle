@@ -5,6 +5,8 @@ plugins {
 
 // mobile-embedded 的上一级即主仓库根;后端源码与运行资源在构建期同步进 APK assets,
 // 运行期解压到 app 私有目录,保持与桌面便携版一致的目录布局。
+// 产出直接落到约定 assets 目录(src/main/assets,已 gitignore),
+// 避免 sourceSets 动态 srcDir 在 AGP 合并任务里的不确定性。
 def backendRoot = rootDir.parentFile
 
 tasks.register('copyBackend', Copy) {
@@ -17,7 +19,7 @@ tasks.register('copyBackend', Copy) {
     from(new File(backendRoot, 'templates')) { into 'templates' }
     from(new File(backendRoot, 'legal')) { into 'legal' }
     from(new File(backendRoot, 'static-v2')) { into 'static-v2' }
-    into layout.buildDirectory.dir('diceframe_backend')
+    into file('src/main/assets/diceframe_backend')
 }
 
 android {
@@ -38,12 +40,6 @@ android {
 
         python {
             version '3.11'
-        }
-    }
-
-    sourceSets {
-        main {
-            assets.srcDir layout.buildDirectory.dir('diceframe_backend')
         }
     }
 }
