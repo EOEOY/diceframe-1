@@ -30,6 +30,11 @@ android {
         versionCode 1
         versionName '0.1.0-poc'
 
+        ndk {
+            // POC 覆盖 arm64 真机与 x86_64 模拟器;每个 ABI 都会打包一份 Python 运行时
+            abiFilters 'arm64-v8a', 'x86_64'
+        }
+
         python {
             version '3.11'
         }
