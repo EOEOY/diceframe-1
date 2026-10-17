@@ -27,7 +27,7 @@ const {
   consumeClick,
 } = useAssistantLauncherPosition()
 const { streaming, actionBusy, pendingApproval, actionError } = useAssistant()
-const { listening, speaking, speak } = useAssistantVoice()
+const { listening, speaking, speak, cancelListening } = useAssistantVoice()
 const { reaction } = useAssistantReactions()
 const reactionSpec = computed(() => reaction.value ? ASSISTANT_REACTIONS[reaction.value.kind] : null)
 const reactionLabel = computed(() => reaction.value && reactionSpec.value
@@ -104,6 +104,12 @@ function onLauncherPointerUp(event: PointerEvent) {
 
 watch(enabled, (isEnabled) => {
   if (!isEnabled) open.value = false
+})
+// The panel is intentionally kept mounted while closed so drafts and scroll
+// position survive.  Closing therefore must cancel any microphone session
+// explicitly instead of relying on AssistantPanel's unmount hook.
+watch(open, (isOpen) => {
+  if (!isOpen) cancelListening()
 })
 </script>
 

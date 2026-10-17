@@ -13,7 +13,7 @@ vi.mock('../src/utils/asr', () => ({
   serverAsrReady: () => true,
   startRecording: startRecordingMock,
 }))
-vi.mock('../src/api/speech', () => ({ assistantTranscribe: assistantTranscribeMock }))
+vi.mock('../src/api/speech', () => ({ speechApi: { assistantTranscribe: assistantTranscribeMock } }))
 vi.mock('../src/utils/tts', async () => {
   const { ref } = await import('vue')
   return {
@@ -112,5 +112,30 @@ describe('DF Agent voice cancellation fences', () => {
     expect(startRecordingMock).toHaveBeenCalledOnce()
     resolved.cancelListening()
     pending.resolve(session())
+  })
+
+  it('ignores a late server transcription error after cancellation', async () => {
+    const pending = deferred<ReturnType<typeof session>>()
+    const recorded = session({ stop: () => Promise.resolve(new Blob(['audio'])) })
+    const recordingReady = deferred<ReturnType<typeof session>>()
+    startRecordingMock.mockReturnValue(recordingReady.promise)
+    assistantTranscribeMock.mockReturnValue(pending.promise)
+    const resolved = withSetup(() => useAssistantVoice())
+
+    resolved.startListening('en', vi.fn())
+    recordingReady.resolve(recorded)
+    await new Promise(resolve => setTimeout(resolve, 0))
+    resolved.stopListening()
+    await new Promise(resolve => setTimeout(resolve, 0))
+    expect(assistantTranscribeMock).toHaveBeenCalledOnce()
+    resolved.cancelListening()
+    resolved.startListening('en', vi.fn())
+    const lateError = new Error('old request failed')
+    pending.reject(lateError)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(resolved.voiceError.value).toBe('')
+    expect(resolved.serverMessage.value).toBe('')
   })
 })

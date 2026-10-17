@@ -103,6 +103,7 @@ function startBrowserRecognition(locale: string, onFinal: (text: string) => void
     interim.value = pending
   }
   session.onerror = (event) => {
+    if (generation !== voiceGeneration) return
     if (event.error === 'not-allowed' || event.error === 'service-not-allowed') voiceError.value = 'mic-denied'
     else if (event.error !== 'aborted' && event.error !== 'no-speech') voiceError.value = 'failed'
   }
@@ -157,6 +158,7 @@ async function finishServerRecording(): Promise<void> {
   try {
     blob = await session.stop()
   } catch {
+    if (generation !== voiceGeneration) return
     voiceError.value = 'failed'
     return
   }
@@ -166,6 +168,7 @@ async function finishServerRecording(): Promise<void> {
     const text = await speechApi.assistantTranscribe(blob, asrLanguageFor(target.locale))
     if (generation === voiceGeneration && text.trim()) target.onFinal(text.trim())
   } catch (error) {
+    if (generation !== voiceGeneration) return
     if (error instanceof ApiError && error.message) serverMessage.value = error.message
     else voiceError.value = 'failed'
   } finally {
