@@ -81,6 +81,7 @@ const voiceInputAvailable = computed(() => voiceInput.value && inputEngine.value
 const voiceErrorText = computed(() => serverMessage.value
   || (voiceError.value ? voiceCopy.value[voiceError.value === 'mic-denied' ? 'micDenied' : voiceError.value] : ''))
 onMounted(() => { void loadAssistantVoiceConfig() })
+watch(activeConversationId, () => voice.cancelListening())
 const headMood = computed<AssistantAvatarMood>(() => {
   if (listening.value) return 'listening'
   if (speaking.value) return 'speaking'
@@ -147,8 +148,10 @@ async function onSubmit() {
 
 function toggleListening() {
   if (listening.value) { voice.stopListening(); return }
+  const conversationAtStart = activeConversationId.value
   // A spoken request is sent as soon as recognition settles, like talking to NOMI.
   voice.startListening(locale.value, (text) => {
+    if (activeConversationId.value !== conversationAtStart) return
     draft.value = appendDictated(draft.value, text)
     void onSubmit()
   })

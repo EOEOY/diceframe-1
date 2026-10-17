@@ -58,7 +58,8 @@ const outputEngine = computed<AssistantVoiceEngine>(() => {
 })
 let recognition: RecognitionLike | null = null
 let recording: RecordingSession | null = null
-let pendingFinal: { locale: string; onFinal: (text: string) => void } | null = null
+let pendingFinal: { locale: string; onFinal: (text: string) => void; generation: number } | null = null
+let voiceGeneration = 0
 let loadPromise: Promise<void> | null = null
 
 export function loadAssistantVoiceConfig(force = false): Promise<void> {
@@ -86,6 +87,7 @@ function resetError(): void {
 function startBrowserRecognition(locale: string, onFinal: (text: string) => void): void {
   const Ctor = recognitionCtor()
   if (!Ctor) { voiceError.value = 'unsupported'; return }
+  const generation = ++voiceGeneration
   const session = new Ctor()
   session.lang = asrLanguageFor(locale)
   session.continuous = false
@@ -95,6 +97,7 @@ function startBrowserRecognition(locale: string, onFinal: (text: string) => void
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index]
       const text = result[0]?.transcript || ''
+      if (generation !== voiceGeneration) return
       if (result.isFinal) { if (text.trim()) onFinal(text.trim()) } else pending += text
     }
     interim.value = pending
@@ -104,29 +107,48 @@ function startBrowserRecognition(locale: string, onFinal: (text: string) => void
     else if (event.error !== 'aborted' && event.error !== 'no-speech') voiceError.value = 'failed'
   }
   session.onend = () => {
+    if (generation !== voiceGeneration) return
     if (recognition === session) recognition = null
     listening.value = false
     interim.value = ''
   }
   recognition = session
   listening.value = true
-  try { session.start() } catch { recognition = null; listening.value = false; voiceError.value = 'failed' }
+  try { session.start() } catch {
+    if (generation === voiceGeneration) {
+      recognition = null; listening.value = false; voiceError.value = 'failed'
+    }
+  }
 }
 
 async function startServerRecording(locale: string, onFinal: (text: string) => void): Promise<void> {
+  const generation = ++voiceGeneration
+  // Mark the request as active before asking for permission. This prevents
+  // duplicate permission prompts and gives cancelListening() a real fence.
+  listening.value = true
+  pendingFinal = { locale, onFinal, generation }
   try {
-    recording = await startRecording()
+    const session = await startRecording()
+    if (generation !== voiceGeneration || !pendingFinal || pendingFinal.generation !== generation || !listening.value) {
+      session.cancel()
+      return
+    }
+    recording = session
   } catch (error) {
-    voiceError.value = error instanceof Error && error.message === 'asr-mic-denied' ? 'mic-denied' : 'failed'
+    if (generation === voiceGeneration) {
+      voiceError.value = error instanceof Error && error.message === 'asr-mic-denied' ? 'mic-denied' : 'failed'
+      recording = null
+      pendingFinal = null
+      listening.value = false
+    }
     return
   }
-  listening.value = true
-  pendingFinal = { locale, onFinal }
 }
 
 async function finishServerRecording(): Promise<void> {
   const session = recording
   const target = pendingFinal
+  const generation = target?.generation ?? voiceGeneration
   recording = null
   pendingFinal = null
   listening.value = false
@@ -138,15 +160,16 @@ async function finishServerRecording(): Promise<void> {
     voiceError.value = 'failed'
     return
   }
+  if (generation !== voiceGeneration) return
   transcribing.value = true
   try {
     const text = await speechApi.assistantTranscribe(blob, asrLanguageFor(target.locale))
-    if (text.trim()) target.onFinal(text.trim())
+    if (generation === voiceGeneration && text.trim()) target.onFinal(text.trim())
   } catch (error) {
     if (error instanceof ApiError && error.message) serverMessage.value = error.message
     else voiceError.value = 'failed'
   } finally {
-    transcribing.value = false
+    if (generation === voiceGeneration) transcribing.value = false
   }
 }
 
@@ -160,10 +183,12 @@ function startListening(locale: string, onFinal: (text: string) => void): void {
 
 function stopListening(): void {
   if (recording) void finishServerRecording()
+  else if (pendingFinal) cancelListening()
   else recognition?.stop()
 }
 
 function cancelListening(): void {
+  voiceGeneration += 1
   const session = recognition
   recognition = null
   session?.abort()
@@ -171,6 +196,7 @@ function cancelListening(): void {
   recording = null
   pendingFinal = null
   listening.value = false
+  transcribing.value = false
   interim.value = ''
 }
 
