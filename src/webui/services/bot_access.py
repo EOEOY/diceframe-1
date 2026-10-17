@@ -69,6 +69,20 @@ def actor_allowed(dependencies: BotAccessDependencies, game_key: str, user_id: s
     return bool(inst and user_id and user_id in inst.players)
 
 
+def surface_for_game(dependencies: BotAccessDependencies, game_key: str) -> str:
+    """Return the authoritative Bot capability for a bound game.
+
+    The access middleware calls this for every game-scoped Bot request.  Keep
+    unknown or malformed state fail-closed instead of treating it as the
+    historical full-access surface.
+    """
+
+    inst = dependencies.registry.get(dependencies.parse_game_key(game_key))
+    if not inst:
+        return adventure_runtime_state.BOT_SURFACE_NONE
+    return adventure_runtime_state.effective_bot_surface(inst)
+
+
 class BotAccessService:
     """Bot binding and actor checks against one explicit registry boundary."""
 
@@ -87,3 +101,6 @@ class BotAccessService:
 
     def actor_allowed(self, game_key: str, user_id: str) -> bool:
         return actor_allowed(self._dependencies, game_key, user_id)
+
+    def surface_for_game(self, game_key: str) -> str:
+        return surface_for_game(self._dependencies, game_key)
