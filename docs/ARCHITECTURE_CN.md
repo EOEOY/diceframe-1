@@ -669,6 +669,8 @@ frontend-v2/src/
 直接编辑所属样式，不再追加同页覆盖层。组织规则与外观对照方法见
 [样式说明](../frontend-v2/src/styles/README.md)。
 
+内容与管理栏目共用导航停靠契约；顶栏移出、二级导航接替及页面内菜单间距的约束与验收见 [工程规则 §14.1](ENGINEERING_RULES.md#141-navigation-layout-contract)。
+
 剧本导入的 AI 整理由 `src/webui/services/adventure_ai_import.py` 拥有。`POST /api/adventures/script/ai` 在 owner 与 token 用量确认后，复用主模型生成服务，分段整理资料并返回 NDJSON 工作进度；客户端断开时取消当前模型调用。输出只允许剧情与参考资料，保持原冒险身份、规则绑定与 GM 可见范围，经原生 Adventure owner 校验后交给前端预览。采用草稿和发布保存仍是分开的操作，保存继续走已有 review/commit 契约。
 
 ---
@@ -6180,7 +6182,7 @@ Agent 每次模型输出使用独立 `assistant_agent_max_tokens`（默认 4096�
 
 悬浮入口是液态玻璃 d20 骰灵（`AssistantAvatar`），思考、聆听、播报、待确认与跑团互动都只是表现层表情。对局界面只通过 `reportAssistantReaction` 报告实时事件（检定揭示、战斗回放队列，以及 `usePlayReactions` 以每局首个快照为基线比较实时状态，加载对局不会重放历史）；`features/assistant/reactions.ts` 负责每种反应的类别、表情、优先级与文案，浏览器偏好可按类别关闭或朗读反应。反应不回流规则，也不进入 Agent 对话。会话记录由 `useAssistantConversations` 按浏览器保存，每段会话记住自己的 Agent session id，重新打开时恢复草稿与待确认操作。Agent 在回答过程中的 `navigate` 结果会直接跳转（浏览器偏好可关闭），并以带“返回上一页”的操作标签留在该条回复下；确认操作返回的跳转仍是显式按钮。语音走 owner-only 的 `/api/assistant/speech` 与 `/api/assistant/transcription`，复用设置中的 TTS/ASR 服务商、不需要对局上下文并计入 AI 请求；未配置服务商时使用浏览器语音。
 
-悬浮入口的 PointerEvent 拖动与浏览器位置持久化由 `useAssistantLauncherPosition` 负责，视口变化夹紧可见位置，拖动与点击/键盘打开分离；通用设置可将已挂载入口恢复到默认位置。`useAssistantWorkspace` 负责可折叠任务区与浏览器显示偏好，手机默认收起但保留状态提示，单列任务区最多占消息区域 45%；隐藏保留已挂载草稿和待确认计划。`SectionWorkspaceShell` 通过观察应用顶栏高度固定二级导航的停靠位置。模型返回多个已注册非审批查询/草稿工具时由框架顺序执行；含写审批、最终回答或未知工具的批次整批拒绝并纠正，仍保持单项服务器审批。格式重试耗尽返回 `MODEL_RESPONSE_INVALID`，保留既有草稿和会话。
+悬浮入口的 PointerEvent 拖动与浏览器位置持久化由 `useAssistantLauncherPosition` 负责，视口变化夹紧可见位置，拖动与点击/键盘打开分离；通用设置可将已挂载入口恢复到默认位置。`useAssistantWorkspace` 负责可折叠任务区与浏览器显示偏好，手机默认收起但保留状态提示，单列任务区最多占消息区域 45%；隐藏保留已挂载草稿和待确认计划。`SectionWorkspaceShell` 根据应用顶栏在视口内的底边动态停靠二级导航：顶栏滚出时上移至屏幕顶部，返回时恢复上下叠放；设置和日志内的吸顶菜单共享该偏移。模型返回多个已注册非审批查询/草稿工具时由框架顺序执行；含写审批、最终回答或未知工具的批次整批拒绝并纠正，仍保持单项服务器审批。格式重试耗尽返回 `MODEL_RESPONSE_INVALID`，保留既有草稿和会话。
 
 `assistant_agent_framework.py` 直接使用 Pydantic AI 的 Agent 执行器、纠错重试、请求预算和延迟审批机制，通过明确适配器复用现有模型服务商传输；`assistant_agent.py` 拥有业务工具适配、会话与服务器确认计划。`assistant_agent_application.py` 和 `assistant_authoring.py` 以明确依赖接入已有内容、游戏、插件和图像服务。LLM 仅提出具名注册工具候选，参数经过 schema 验证，修改由框架延迟、经服务器保存的计划与确认后才执行；最终 authority 仍属各领域服务。
 
